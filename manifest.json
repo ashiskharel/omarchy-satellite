@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "ashis.satellite",
+  "name": "Satellite",
+  "version": "1.0.0",
+  "author": "Ashis K",
+  "description": "Overhead satellites beside the weather: elevation, azimuth, and the next pass.",
+  "kinds": ["bar-widget"],
+  "entryPoints": { "barWidget": "BarWidget.qml" },
+  "barWidget": {
+    "displayName": "Satellite",
+    "description": "Which satellite is over you, and where to look",
+    "category": "Info",
+    "allowMultiple": false,
+    "defaultSection": "center"
+  }
+}
