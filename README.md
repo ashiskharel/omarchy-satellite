@@ -26,4 +26,12 @@ omarchy bar put ashis.satellite --after omarchy.weather
 
 Middle-click or right-click the label to ping without opening the panel.
 
+## Remove
+
+```sh
+omarchy plugin remove ashis.satellite
+```
+
+That disables the plugin and deletes the installed copy. The rest of the bar stays as it is.
+
 The orbit math is the MIT-licensed [sgp4](https://pypi.org/project/sgp4/) library, included under `vendor/sgp4` as pure Python. Its license is `vendor/sgp4/LICENSE`.
