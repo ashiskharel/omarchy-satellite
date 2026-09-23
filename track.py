@@ -35,6 +35,9 @@ TLE_MAX_AGE = timedelta(hours=3)
 HORIZON_DEG = 10.0
 PASS_HOURS = 18
 PASS_STEP = timedelta(seconds=30)
+# One CelesTrak TLE is a few hundred bytes. The location lookup is one small JSON object.
+TLE_BODY_LIMIT = 4 * 1024
+LOCATION_BODY_LIMIT = 16 * 1024
 
 
 def gmst(jd_full: float) -> float:
@@ -175,10 +178,31 @@ def next_pass(sat, obs_ecef, lat, lon, start: datetime):
     return None
 
 
-def fetch_text(url: str, timeout: int = 12) -> str:
+class ResponseTooLarge(RuntimeError):
+    pass
+
+
+def read_bounded(response, limit: int) -> bytes:
+    """Read at most limit bytes. A longer body is rejected before it is decoded."""
+    declared = response.headers.get("Content-Length")
+    if declared is not None:
+        try:
+            size = int(declared)
+        except (TypeError, ValueError) as exc:
+            raise ResponseTooLarge("Content-Length was not a number") from exc
+        if size < 0 or size > limit:
+            raise ResponseTooLarge(f"response declared {size} bytes; limit is {limit}")
+    body = response.read(limit + 1)
+    if len(body) > limit:
+        raise ResponseTooLarge(f"response exceeded {limit} bytes")
+    return body
+
+
+def fetch_text(url: str, timeout: int = 12, limit: int = TLE_BODY_LIMIT) -> str:
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(request, timeout=timeout) as response:
-        return response.read().decode("utf-8", "replace")
+        body = read_bounded(response, limit)
+    return body.decode("utf-8", "replace")
 
 
 def load_tles(refresh: bool):
@@ -255,7 +279,7 @@ def network_location():
                 return cached
             except json.JSONDecodeError:
                 pass
-    raw = json.loads(fetch_text("https://ipwho.is/", timeout=8))
+    raw = json.loads(fetch_text("https://ipwho.is/", timeout=8, limit=LOCATION_BODY_LIMIT))
     if not raw.get("success", True):
         raise RuntimeError(raw.get("message") or "location lookup failed")
     place = {"name": raw.get("city") or "This network", "latitude": float(raw["latitude"]), "longitude": float(raw["longitude"]), "source": "network"}
